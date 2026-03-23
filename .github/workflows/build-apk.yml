@@ -1,4 +1,4 @@
-name: Build APK
+name: Build Flet APK
 
 on:
   push:
@@ -8,23 +8,27 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+    - name: Checkout código
+      uses: actions/checkout@v3
 
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
+    - name: Configurar Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
 
-      - name: Instalar Flet
-        run: pip install flet
+    - name: Instalar dependências
+      run: |
+        pip install flet flet-cli buildozer
 
-      - name: Build APK
-        run: |
-          cd relogio_leao/src
-          flet build apk
+    - name: Build APK
+      run: |
+        cd relogio_leao/src
+        flet build apk
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v3
-        with:
-          name: RelogioLeao3D
-          path: relogio_leao/src/build/apk/*.apk
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: RelogioLeao3D
+        path: relogio_leao/src/build/apk/*.apk
