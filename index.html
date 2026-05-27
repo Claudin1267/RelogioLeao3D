@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>RelogioLeao — Luxo V3 | Tela de Bloqueio</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75' fill='%23d4af37'>⏰</text></svg>">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #080500;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Georgia', serif;
+    touch-action: none;
+  }
+
+  #gears-bg {
+    position: fixed; top:0; left:0;
+    width:100%; height:100%; z-index:0;
+  }
+  #particles {
+    position: fixed; top:0; left:0;
+    width:100%; height:100%; z-index:1;
+    pointer-events:none;
+  }
+  .vignette {
+    position: fixed; top:0; left:0;
+    width:100%; height:100%; z-index:2;
+    pointer-events:none;
+    background: radial-gradient(ellipse at center,
+      transparent 25%, rgba(0,0,0,0.88) 100%);
+  }
+
+  .scene {
+    position: relative; z-index:10;
+    width:100vw; height:100vh;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:space-between;
+    padding: 32px 16px 20px;
+  }
+
+  /* STATUS BAR */
+  .statusbar {
+    width:100%; display:flex;
+    justify-content:space-between; align-items:center;
+    padding: 0 8px;
+  }
+  .statusbar .stime {
+    font-size:.82rem; color:#d4af37;
+    letter-spacing:.1em; font-family:'Courier New',monospace;
+    text-shadow: 0 0 8px rgba(212,175,55,.6);
+  }
+  .statusbar .sicons { color:#d4af37; font-size:.75rem; opacity:.75; letter-spacing:.1em; }
+
+  /* CLOCK */
+  .clock-wrap {
+    filter:
+      drop-shadow(0 0 28px rgba(212,175,55,.65))
+      drop-shadow(0 0 70px rgba(180,140,20,.3));
+  }
+  #clock { width:270px; height:270px; display:block; border-radius:50%; }
+
+  /* DIGITAL */
+  .digital-block { text-align:center; }
+  .digital {
+    font-size:3.8rem; font-weight:bold;
+    color:#d4af37;
+    text-shadow: 0 0 14px rgba(212,175,55,.95),
+                 0 0 45px rgba(212,175,55,.3),
+                 0 2px 0 #000;
+    letter-spacing:.05em;
+  }
+  .date-line {
+    font-size:.7rem; letter-spacing:.3em;
+    color:#b8962e; text-transform:uppercase;
+    text-shadow: 0 0 8px rgba(212,175,55,.4);
+    margin-top:5px;
+  }
+
+  /* WIDGETS */
+  .widgets { display:flex; gap:12px; width:100%; max-width:370px; }
+  .widget {
+    flex:1;
+    background:rgba(15,10,1,.88);
+    border:1px solid rgba(212,175,55,.2);
+    border-radius:18px; padding:13px 14px 11px;
+    backdrop-filter:blur(8px);
+    box-shadow: 0 0 16px rgba(212,175,55,.07),
+                inset 0 1px 0 rgba(255,240,150,.06);
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  .widget:active {
+    transform: scale(0.95);
+    background:rgba(15,10,1,0.95);
+  }
+  .wlabel {
+    font-size:.55rem; letter-spacing:.3em;
+    color:rgba(212,175,55,.5); text-transform:uppercase;
+    font-family:'Courier New',monospace; margin-bottom:7px;
+  }
+  .wmain {
+    font-size:1.75rem; color:#d4af37;
+    text-shadow:0 0 12px rgba(212,175,55,.7);
+    display:flex; align-items:center; gap:7px;
+  }
+  .wsub { font-size:.6rem; color:rgba(212,175,55,.45); margin-top:5px; }
+  .up   { font-size:.68rem; color:#4cff88; }
+  .dn   { font-size:.68rem; color:#ff5555; }
+
+  /* SEARCH */
+  .search-bar {
+    width:100%; max-width:370px;
+    background:rgba(15,10,1,.88);
+    border:1px solid rgba(212,175,55,.25);
+    border-radius:50px;
+    display:flex; align-items:center;
+    padding:10px 20px; gap:10px;
+    backdrop-filter:blur(8px);
+    box-shadow:0 0 20px rgba(212,175,55,.06);
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  .search-bar:active {
+    transform: scale(0.98);
+    background:rgba(15,10,1,0.95);
+  }
+  .search-bar .sph {
+    color:rgba(212,175,55,.35); font-size:.82rem;
+    flex:1; font-family:'Courier New',monospace;
+    letter-spacing:.04em;
+  }
+  .search-bar .sico { font-size:1rem; color:rgba(212,175,55,.4); }
+
+  /* APP ICONS */
+  .app-row {
+    display:flex; gap:18px; align-items:center; justify-content:center;
+    flex-wrap: wrap;
+  }
+  .app-icon {
+    width:52px; height:52px;
+    background:rgba(15,10,1,.88);
+    border:1px solid rgba(212,175,55,.2);
+    border-radius:14px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.4rem;
+    box-shadow: 0 0 14px rgba(212,175,55,.1),
+                inset 0 1px 0 rgba(255,240,150,.06);
+    cursor:pointer;
+    transition: all .15s ease;
+    text-decoration: none;
+  }
+  .app-icon:active { 
+    transform:scale(.92);
+    background:rgba(15,10,1,0.95);
+  }
+
+  /* Modal */
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.8);
+    backdrop-filter: blur(4px);
+  }
+
+  .modal-content {
+    background-color: #0d0700;
+    margin: auto;
+    padding: 24px;
+    border: 1px solid rgba(212,175,55,.3);
+    border-radius: 20px;
+    width: 90%;
+    max-width: 400px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 40px rgba(212,175,55,.4);
+  }
+
+  .modal-close {
+    color: #d4af37;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.3s;
+  }
+
+  .modal-close:hover {
+    color: #f5d060;
+  }
+
+  .modal h2 {
+    color: #d4af37;
+    text-shadow: 0 0 12px rgba(212,175,55,.7);
+    margin-bottom: 16px;
+    font-size: 1.8rem;
+  }
+
+  .modal p {
+    color: rgba(212,175,55,.8);
+    line-height: 1.6;
+    margin-bottom: 12px;
+    font-size: 0.9rem;
+  }
+
+  .modal-btn {
+    background: rgba(212,175,55,.2);
+    border: 1px solid rgba(212,175,55,.4);
+    color: #d4af37;
+    padding: 12px 24px;
+    margin: 8px 4px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-family: 'Georgia', serif;
+    font-size: 0.9rem;
+  }
+
+  .modal-btn:hover {
+    background: rgba(212,175,55,.4);
+    transform: scale(1.05);
+  }
+
+  .modal-btn-primary {
+    background: #d4af37;
+    color: #080500;
+    font-weight: bold;
+  }
+
+  .modal-btn-primary:hover {
+    background: #f5d060;
+  }
+
+  .whatsapp-link {
+    display: inline-block;
+    background: #25D366;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    margin-top: 12px;
+    transition: all 0.3s;
+    font-weight: bold;
+    cursor: pointer;
+    border: none;
+    width: 100%;
+    text-align: center;
+  }
+
+  .whatsapp-link:hover {
+    background: #1ebe56;
+    transform: scale(1.02);
+  }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    .digital { font-size: 2.5rem; }
+    #clock { width: 200px; height: 200px; }
+    .app-row { gap: 12px; }
+    .app-icon { width: 45px; height: 45px; font-size: 1.2rem; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="gears-bg"></canvas>
+<canvas id="particles"></canvas>
+<div class="vignette"></div>
+
+<div class="scene">
+
+  <!-- STATUS BAR -->
+  <div class="statusbar">
+    <span class="stime" id="stime">00:00</span>
+    <span class="sicons">▲▲▲ ⬡ ▭</span>
+  </div>
+
+  <!-- ANALOG CLOCK -->
+  <div class="clock-wrap">
+    <canvas id="clock" width="540" height="540"></canvas>
+  </div>
+
+  <!-- DIGITAL TIME -->
+  <div class="digital-block">
+    <div class="digital" id="digital">00:00</div>
+    <div class="date-line" id="dateline">---</div>
+  </div>
+
+  <!-- WIDGETS -->
+  <div class="widgets">
+    <div class="widget" onclick="openModal('weather')">
+      <div class="wlabel">WEATHER</div>
+      <div class="wmain" id="w-temp">
+        <span>--°</span><span id="w-icon">⛅</span>
+      </div>
+      <div class="wsub" id="w-loc">Araruama, RJ</div>
+    </div>
+    <div class="widget" onclick="openModal('market')">
+      <div class="wlabel">MARKET</div>
+      <div class="wmain"><span id="m-val">--</span></div>
+      <div class="wsub"><span class="up" id="m-chg">↗ --%</span></div>
+    </div>
+  </div>
+
+  <!-- SEARCH BAR -->
+  <div class="search-bar" onclick="openModal('search')">
+    <span class="sico">🔍</span>
+    <span class="sph">Buscar Relógio...</span>
+    <span class="sico">🎙️</span>
+  </div>
+
+  <!-- APP ICONS -->
+  <div class="app-row">
+    <a href="https://wa.me/5522988083910?text=Olá%20RelogioLeao%21%20Gostaria%20de%20conhecer%20seus%20relógios%20de%20luxo." class="app-icon" title="WhatsApp">💬</a>
+    <div class="app-icon" onclick="openModal('photos')" title="Galeria">📷</div>
+    <div class="app-icon" onclick="openModal('store')" title="Loja">🛍️</div>
+    <div class="app-icon" onclick="openModal('contact')" title="Contato">☎️</div>
+  </div>
+
+</div>
+
+<!-- MODAL: WEATHER -->
+<div id="weatherModal" class="modal">
+  <div class="modal-content">
+    <span class="modal-close" onclick="closeModal('weather')">&times;</span>
+    <h2>🌤️ Clima</h2>
+    <p id="weather-info">Carregando dados meteorológicos...</p>
+    <p id="weather-detail"></p>
+    <button class="modal-btn modal-btn-primary" onclick="closeModal('weather')">Fechar</button>
+  </div>
+</div>
+
+<!-- MODAL: MARKET -->
+<div id="marketModal" class="modal">
+  <div class="modal-content">
+    <span class="modal-close" onclick="closeModal('market')">&times;</span>
+    <h2>📈 Mercado</h2>
+    <p id="market-info">IBOVESPA - Índice de Luxo</p>
+    <p id="market-value" style="font-size: 1.5rem; color: #4cff88; font-weight: bold;"></p>
+    <p id="market-change"></p>
+    <p style="font-size: 0.8rem; color: rgba(212,175,55,.5);">Atualizado a cada 8 segundos</p>
+    <button class="modal-btn modal-btn-primary" onclick="closeModal('market')">Fechar</button>
+  </div>
+</div>
+
+<!-- MODAL: SEARCH -->
+<div id="searchModal" class="modal">
+  <div class="modal-content">
+    <span class="modal-close" onclick="closeModal('search')">&times;</span>
+    <h2>🔍 Buscar</h2>
+    <input type="text" id="searchInput" placeholder="Digite para buscar..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(212,175,55,.3); background: rgba(15,10,1,.9); color: #d4af37; margin-bottom: 12px; font-family: 'Courier New', monospace;">
+    <p id="searchResults" style="color: rgba(212,175,55,.7);">Ex: Relógio Automático, Luxo, Ouro...</p>
+    <button class="modal-btn modal-btn-primary" onclick="closeModal('search')">Fechar</button>
+  </div>
+</div>
+
+<!-- MODAL: PHOTOS -->
+<div id="photosModal" class="modal">
+  <div class="modal-content">
+    <span class="modal-close" onclick="closeModal('photos')">&times;</span>
+    <h2>📷 Galeria</h2>
+    <p>Coleção RelogioLeao 3D Premium</p>
+    <p style="font-size: 0.9rem; color: rgba(212,175,55,.6); margin: 16px 0;">
+      ⏰ Relógio Automático Suíço<br>
+      ⏰ Relógio Debrujador 3D<br>
+      ⏰ Relógio Clássico de Ouro<br>
+      ⏰ Relógio Digital Neon
+    </p>
+    <a href="https://wa.me/5522988083910?text=Gostaria%20de%20ver%20fotos%20dos%20relógios" class="whatsapp-link">Solicitar Fotos</a>
+    <button class="modal-btn" onclick="closeModal('photos')">Fechar</button>
+  </div>
+</div>
+
+<!-- MODAL: STORE -->
+<div id="storeModal" class="modal">
+  <div class="modal-content">
+    <span class="modal-close" onclick="closeModal('store')">&times;</span>
+    <h2>🛍️ Loja</h2>
+    <p style="font-size: 0.95rem;">Catálogo RelogioLeao Premium</p>
+    <p style="font-size: 0.85rem; color: rgba(212,175,55,.7); margin: 12px 0; line-height: 1.8;">
+      💎 <strong>Luxo Collection</strong><br>
+      A partir de R$ 1.200,00<br><br>
+      🏆 <strong>Premium Edition</strong><br>
+      A partir de R$ 2.500,00<br><br>
+      👑 <strong>Exclusive VIP</strong><br>
+      Sob consulta
+    </p>
+    <a href="https://wa.me/5522988083910?text=Quero%20conhecer%20os%20relógios%20da%20loja%20RelogioLeao" class="whatsapp-link">Abrir Loja</a>
+    <button class="modal-btn" onclick="closeModal('store')">Fechar</button>
+  </div>
+</div>
+
+<!-- MODAL: CONTACT -->
+<div id="contactModal" class="modal">
+  <div class="modal-content">
+    <span class="modal-close" onclick="closeModal('contact')">&times;</span>
+    <h2>☎️ Contato</h2>
+    <p style="margin-bottom: 16px;">Fale conosco:</p>
+    <a href="https://wa.me/5522988083910" class="whatsapp-link">
+      💬 WhatsApp: (22) 98808-3910
+    </a>
+    <p style="font-size: 0.8rem; color: rgba(212,175,55,.5); margin-top: 12px; text-align: center;">
+      Atendimento 24/7<br>
+      Garantia Premium<br>
+      Frete Grátis
+    </p>
+    <button class="modal-btn modal-btn-primary" onclick="closeModal('contact')">Fechar</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// GEARS BACKGROUND
+// ═══════════════════════════════════════════════
+const gc  = document.getElementById('gears-bg');
+const gx  = gc.getContext('2d');
+gc.width  = window.innerWidth;
+gc.height = window.innerHeight;
+
+const GEARS = [
+  { x:.18, y:.22, r:110, teeth:18, speed:.0004,  angle:0 },
+  { x:.78, y:.15, r: 75, teeth:12, speed:-.0007, angle:1 },
+  { x:.85, y:.65, r: 90, teeth:14, speed:.0005,  angle:2 },
+  { x:.08, y:.72, r: 65, teeth:10, speed:-.0009, angle:.5},
+  { x:.5,  y:.88, r: 50, teeth: 8, speed:.0011,  angle:1.2},
+];
+
+function drawGear(ctx, cx, cy, r, teeth, angle) {
+  const toothH = r * 0.22;
+  const inner  = r - toothH;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(angle);
+
+  ctx.beginPath();
+  for (let i = 0; i < teeth; i++) {
+    const a1 = (i / teeth) * Math.PI * 2;
+    const a2 = ((i + .35) / teeth) * Math.PI * 2;
+    const a3 = ((i + .65) / teeth) * Math.PI * 2;
+    const a4 = ((i + 1)   / teeth) * Math.PI * 2;
+    ctx.lineTo(Math.cos(a1) * inner, Math.sin(a1) * inner);
+    ctx.lineTo(Math.cos(a2) * r,     Math.sin(a2) * r);
+    ctx.lineTo(Math.cos(a3) * r,     Math.sin(a3) * r);
+    ctx.lineTo(Math.cos(a4) * inner, Math.sin(a4) * inner);
+  }
+  ctx.closePath();
+
+  const gg = ctx.createRadialGradient(0,0,0,0,0,r);
+  gg.addColorStop(0,   'rgba(80,55,5,.18)');
+  gg.addColorStop(0.6, 'rgba(50,35,2,.14)');
+  gg.addColorStop(1,   'rgba(212,175,55,.09)');
+  ctx.fillStyle   = gg;
+  ctx.strokeStyle = 'rgba(212,175,55,.13)';
+  ctx.lineWidth   = 1.5;
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(0, 0, inner * .55, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(212,175,55,.1)';
+  ctx.lineWidth   = 1;
+  ctx.stroke();
+
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a) * inner * .18, Math.sin(a) * inner * .18);
+    ctx.lineTo(Math.cos(a) * inner * .52, Math.sin(a) * inner * .52);
+    ctx.strokeStyle = 'rgba(212,175,55,.08)';
+    ctx.lineWidth   = 2;
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function animGears(ts) {
+  gx.clearRect(0, 0, gc.width, gc.height);
+  GEARS.forEach(g => {
+    g.angle += g.speed;
+    drawGear(gx, g.x * gc.width, g.y * gc.height, g.r, g.teeth, g.angle);
+  });
+  requestAnimationFrame(animGears);
+}
+requestAnimationFrame(animGears);
+
+// ═══════════════════════════════════════════════
+// GOLD PARTICLES
+// ═══════════════════════════════════════════════
+const pc  = document.getElementById('particles');
+const pctx= pc.getContext('2d');
+pc.width  = window.innerWidth;
+pc.height = window.innerHeight;
+
+const PARTS = Array.from({length:40}, () => ({
+  x:  Math.random() * pc.width,
+  y:  Math.random() * pc.height,
+  r:  Math.random() * 1.8 + .3,
+  sp: Math.random() * .3 + .08,
+  op: Math.random(),
+  dop:(Math.random()-.5)*.01,
+  dr: (Math.random()-.5)*.25
+}));
+
+function animParticles() {
+  pctx.clearRect(0, 0, pc.width, pc.height);
+  PARTS.forEach(p => {
+    p.y  -= p.sp; p.x += p.dr;
+    p.op += p.dop;
+    if (p.op<0||p.op>1) p.dop*=-1;
+    if (p.y < -5) { p.y=pc.height+5; p.x=Math.random()*pc.width; }
+    pctx.beginPath();
+    pctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+    pctx.fillStyle = `rgba(212,175,55,${p.op*.6})`;
+    pctx.fill();
+  });
+  requestAnimationFrame(animParticles);
+}
+requestAnimationFrame(animParticles);
+
+// ═══════════════════════════════════════════════
+// ANALOG CLOCK
+// ═══════════════════════════════════════════════
+const cv  = document.getElementById('clock');
+const ctx = cv.getContext('2d');
+const S   = 540;
+const C   = S / 2;
+const R   = C - 18;
+
+function drawClock() {
+  ctx.clearRect(0, 0, S, S);
+  const now = new Date();
+  const h   = now.getHours() % 12;
+  const m   = now.getMinutes();
+  const s   = now.getSeconds();
+  const ms  = now.getMilliseconds();
+
+  const bg = ctx.createRadialGradient(C,C*.7,0,C,C,R);
+  bg.addColorStop(0,  '#1a0f00');
+  bg.addColorStop(.65,'#0d0700');
+  bg.addColorStop(1,  '#040200');
+  ctx.beginPath(); ctx.arc(C,C,R,0,Math.PI*2);
+  ctx.fillStyle=bg; ctx.fill();
+
+  ctx.beginPath(); ctx.arc(C+3,C+3,R,0,Math.PI*2);
+  ctx.strokeStyle='rgba(0,0,0,.55)'; ctx.lineWidth=20; ctx.stroke();
+
+  const bz = ctx.createLinearGradient(C-R,C-R,C+R,C+R);
+  bz.addColorStop(0,   '#6b4f0e');
+  bz.addColorStop(.18, '#f5d060');
+  bz.addColorStop(.35, '#d4af37');
+  bz.addColorStop(.5,  '#8b6914');
+  bz.addColorStop(.65, '#f5d060');
+  bz.addColorStop(.82, '#d4af37');
+  bz.addColorStop(1,   '#6b4f0e');
+  ctx.beginPath(); ctx.arc(C,C,R,0,Math.PI*2);
+  ctx.strokeStyle=bz; ctx.lineWidth=18; ctx.stroke();
+
+  ctx.beginPath(); ctx.arc(C,C,R-10,0,Math.PI*2);
+  ctx.strokeStyle='rgba(212,175,55,.25)'; ctx.lineWidth=1; ctx.stroke();
+
+  const secFrac = (s + ms/1000) / 60;
+  ctx.beginPath();
+  ctx.arc(C, C, R-22, -Math.PI/2, -Math.PI/2 + secFrac*Math.PI*2);
+  ctx.strokeStyle = 'rgba(0,220,255,0.55)';
+  ctx.lineWidth   = 4;
+  ctx.shadowBlur  = 14;
+  ctx.shadowColor = '#00dcff';
+  ctx.stroke();
+  ctx.shadowBlur  = 0;
+
+  ctx.beginPath(); ctx.arc(C,C,R-22,0,Math.PI*2);
+  ctx.strokeStyle='rgba(212,175,55,.1)'; ctx.lineWidth=4; ctx.stroke();
+
+  const minFrac = (m + s/60) / 60;
+  ctx.beginPath();
+  ctx.arc(C,C,R-32,-Math.PI/2,-Math.PI/2+minFrac*Math.PI*2);
+  ctx.strokeStyle='rgba(212,175,55,.55)';
+  ctx.lineWidth=3;
+  ctx.shadowBlur=10; ctx.shadowColor='#d4af37';
+  ctx.stroke(); ctx.shadowBlur=0;
+
+  ctx.beginPath(); ctx.arc(C,C,R-32,0,Math.PI*2);
+  ctx.strokeStyle='rgba(212,175,55,.08)'; ctx.lineWidth=3; ctx.stroke();
+
+  ctx.beginPath(); ctx.arc(C,C,R*.62,0,Math.PI*2);
+  ctx.strokeStyle='rgba(212,175,55,.1)'; ctx.lineWidth=1; ctx.stroke();
+
+  for (let i=0; i<60; i++) {
+    const a   = (i/60)*Math.PI*2 - Math.PI/2;
+    const isH = i%5===0;
+    const isQ = i%15===0;
+    const r1  = R-44;
+    const r2  = isH ? R-68 : R-54;
+    ctx.save();
+    ctx.shadowBlur  = isH ? 10 : 0;
+    ctx.shadowColor = '#d4af37';
+    ctx.beginPath();
+    ctx.moveTo(C+Math.cos(a)*r1, C+Math.sin(a)*r1);
+    ctx.lineTo(C+Math.cos(a)*r2, C+Math.sin(a)*r2);
+    ctx.strokeStyle = isQ ? '#f5d060' : isH ? '#d4af37' : 'rgba(212,175,55,.3)';
+    ctx.lineWidth   = isQ ? 4 : isH ? 2.5 : 1;
+    ctx.lineCap     = 'round';
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  for (let i=1; i<=12; i++) {
+    const a  = (i/12)*Math.PI*2-Math.PI/2;
+    const nr = R*.68;
+    const x  = C+Math.cos(a)*nr;
+    const y  = C+Math.sin(a)*nr;
+    ctx.save();
+    ctx.font        = `${i%3===0?'bold ':''} ${i%3===0?28:22}px Georgia`;
+    ctx.fillStyle   = i%3===0 ? '#f5d060' : '#c9a227';
+    ctx.shadowBlur  = i%3===0 ? 14 : 6;
+    ctx.shadowColor = '#d4af37';
+    ctx.fillText(i, x, y);
+    ctx.restore();
+  }
+
+  function hand(deg, len, wide, colA, colB, glow, tailLen, futuristic) {
+    const a  = (deg*Math.PI/180)-Math.PI/2;
+    const x2 = C+Math.cos(a)*len;
+    const y2 = C+Math.sin(a)*len;
+    const ba = a+Math.PI;
+
+    ctx.beginPath();
+    ctx.moveTo(C+3,C+3); ctx.lineTo(x2+3,y2+3);
+    ctx.strokeStyle='rgba(0,0,0,.6)';
+    ctx.lineWidth=wide+3; ctx.lineCap='round'; ctx.stroke();
+
+    if (futuristic) {
+      ctx.beginPath();
+      ctx.moveTo(C,C); ctx.lineTo(x2,y2);
+      ctx.strokeStyle=colA;
+      ctx.lineWidth=wide;
+      ctx.shadowBlur=glow; ctx.shadowColor=colA;
+      ctx.lineCap='butt'; ctx.stroke(); ctx.shadowBlur=0;
+
+      ctx.save();
+      ctx.translate(x2,y2); ctx.rotate(a);
+      ctx.beginPath();
+      ctx.moveTo(0,0);
+      ctx.lineTo(-6,-4); ctx.lineTo(-14,0); ctx.lineTo(-6,4);
+      ctx.closePath();
+      ctx.fillStyle=colA;
+      ctx.shadowBlur=18; ctx.shadowColor=colA;
+      ctx.fill(); ctx.shadowBlur=0;
+      ctx.restore();
+
+      ctx.beginPath(); ctx.arc(x2,y2,4,0,Math.PI*2);
+      ctx.fillStyle=colB;
+      ctx.shadowBlur=22; ctx.shadowColor=colA;
+      ctx.fill(); ctx.shadowBlur=0;
+    } else {
+      const g = ctx.createLinearGradient(C,C,x2,y2);
+      g.addColorStop(0,colB); g.addColorStop(.4,colA); g.addColorStop(1,colB);
+      ctx.beginPath();
+      ctx.moveTo(C,C); ctx.lineTo(x2,y2);
+      ctx.strokeStyle=g; ctx.lineWidth=wide;
+      ctx.shadowBlur=glow; ctx.shadowColor=colA;
+      ctx.lineCap='round'; ctx.stroke(); ctx.shadowBlur=0;
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(C,C);
+    ctx.lineTo(C+Math.cos(ba)*tailLen, C+Math.sin(ba)*tailLen);
+    ctx.strokeStyle=colB; ctx.lineWidth=wide*.55;
+    ctx.lineCap='round'; ctx.stroke();
+  }
+
+  const hA = (h + m/60 + s/3600)*30;
+  const mA = (m + s/60)*6;
+  const sA = (s + ms/1000)*6;
+
+  hand(hA, R*.46, 12, '#d4af37','#f5d060', 18, 26, false);
+  hand(mA, R*.68,  7, '#d4af37','#ffe87c', 14, 22, false);
+  hand(sA, R*.80,  2, '#00dcff','#ffffff', 28, 26, true);
+
+  ctx.beginPath(); ctx.arc(C,C,18,0,Math.PI*2);
+  ctx.strokeStyle='rgba(0,220,255,.6)';
+  ctx.lineWidth=2;
+  ctx.shadowBlur=14; ctx.shadowColor='#00dcff';
+  ctx.stroke(); ctx.shadowBlur=0;
+
+  const jg = ctx.createRadialGradient(C-4,C-4,0,C,C,16);
+  jg.addColorStop(0,  '#fff8dc');
+  jg.addColorStop(.3, '#f5d060');
+  jg.addColorStop(.6, '#d4af37');
+  jg.addColorStop(1,  '#7a5c10');
+  ctx.beginPath(); ctx.arc(C,C,14,0,Math.PI*2);
+  ctx.fillStyle=jg;
+  ctx.shadowBlur=16; ctx.shadowColor='#d4af37';
+  ctx.fill(); ctx.shadowBlur=0;
+
+  ctx.beginPath(); ctx.arc(C,C,5,0,Math.PI*2);
+  ctx.fillStyle='#080500'; ctx.fill();
+
+  const pad = n=>String(n).padStart(2,'0');
+  const days   = ['DOMINGO','SEGUNDA-FEIRA','TERÇA-FEIRA','QUARTA-FEIRA','QUINTA-FEIRA','SEXTA-FEIRA','SÁBADO'];
+  const months = ['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
+
+  document.getElementById('digital').textContent   = `${pad(now.getHours())}:${pad(m)}`;
+  document.getElementById('dateline').textContent  = `${days[now.getDay()]}, ${now.getDate()} DE ${months[now.getMonth()]}`;
+  document.getElementById('stime').textContent     = `${pad(now.getHours())}:${pad(m)}`;
+
+  requestAnimationFrame(drawClock);
+}
+drawClock();
+
+// ═══════════════════════════════════════════════
+// WEATHER
+// ═══════════════════════════════════════════════
+async function fetchWeather() {
+  try {
+    const url = 'https://api.open-meteo.com/v1/forecast?latitude=-22.87&longitude=-42.34&current_weather=true&hourly=relativehumidity_2m&timezone=America/Sao_Paulo';
+    const res  = await fetch(url);
+    const data = await res.json();
+    const wc   = data.current_weather;
+    const code = wc.weathercode;
+    const temp = Math.round(wc.temperature);
+
+    const icons = {
+      0:'☀️',1:'🌤️',2:'⛅',3:'☁️',
+      45:'🌫️',48:'🌫️',51:'🌦️',61:'🌧️',
+      71:'❄️',80:'🌦️',95:'⛈️',99:'⛈️'
+    };
+    const icon = icons[code] || (code<=3?'⛅':'🌧️');
+
+    document.getElementById('w-temp').innerHTML = `<span>${temp}°</span><span>${icon}</span>`;
+    document.getElementById('w-loc').textContent = 'Araruama, RJ';
+    document.getElementById('weather-info').textContent = `${temp}°C - ${icon}`;
+    document.getElementById('weather-detail').textContent = 'Clima em Araruama, RJ';
+  } catch(e) {
+    document.getElementById('w-temp').innerHTML = '<span>--°</span><span>⛅</span>';
+  }
+}
+fetchWeather();
+setInterval(fetchWeather, 600000);
+
+// ═══════════════════════════════════════════════
+// MARKET
+// ═══════════════════════════════════════════════
+function updateMarket() {
+  const base  = 127450;
+  const rand  = (Math.random()-.48) * 300;
+  const val   = (base + rand).toFixed(0);
+  const chg   = ((rand/base)*100).toFixed(2);
+  const up    = rand >= 0;
+  document.getElementById('m-val').textContent = Number(val).toLocaleString('pt-BR');
+  const el = document.getElementById('m-chg');
+  el.textContent  = `${up?'↗':'↘'} ${up?'+':''}${chg}%`;
+  el.className    = up ? 'up' : 'dn';
+  
+  document.getElementById('market-value').textContent = Number(val).toLocaleString('pt-BR');
+  document.getElementById('market-change').innerHTML = `<span class="${up ? 'up' : 'dn'}">${up?'↗':'↘'} ${up?'+':''}${chg}%</span>`;
+}
+updateMarket();
+setInterval(updateMarket, 8000);
+
+// ═══════════════════════════════════════════════
+// MODAL FUNCTIONS
+// ═══════════════════════════════════════════════
+function openModal(type) {
+  const modals = {
+    'weather': 'weatherModal',
+    'market': 'marketModal',
+    'search': 'searchModal',
+    'photos': 'photosModal',
+    'store': 'storeModal',
+    'contact': 'contactModal'
+  };
+  
+  const modalId = modals[type];
+  if (modalId) {
+    document.getElementById(modalId).style.display = 'block';
+  }
+}
+
+function closeModal(type) {
+  const modals = {
+    'weather': 'weatherModal',
+    'market': 'marketModal',
+    'search': 'searchModal',
+    'photos': 'photosModal',
+    'store': 'storeModal',
+    'contact': 'contactModal'
+  };
+  
+  const modalId = modals[type];
+  if (modalId) {
+    document.getElementById(modalId).style.display = 'none';
+  }
+}
+
+window.onclick = function(event) {
+  const modals = document.querySelectorAll('.modal');
+  modals.forEach(modal => {
+    if (event.target == modal) {
+      modal.style.display = 'none';
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('searchInput');
+  if (searchInput) {
+    searchInput.addEventListener('keyup', function() {
+      const query = this.value.toLowerCase();
+      const results = document.getElementById('searchResults');
+      
+      if (!query) {
+        results.textContent = 'Ex: Relógio Automático, Luxo, Ouro...';
+        return;
+      }
+      
+      const items = [
+        'Relógio Automático Suíço',
+        'Relógio Debrujador 3D',
+        'Relógio Clássico de Ouro',
+        'Relógio Digital Neon',
+        'Relógio Cronógrafo',
+        'Relógio Minimalista'
+      ];
+      
+      const filtered = items.filter(item => item.toLowerCase().includes(query));
+      
+      if (filtered.length > 0) {
+        results.innerHTML = filtered.map(item => 
+          `<div style="padding: 8px 0; border-bottom: 1px solid rgba(212,175,55,.1);">🔔 ${item}</div>`
+        ).join('');
+      } else {
+        results.textContent = 'Nenhum resultado encontrado';
+      }
+    });
+  }
+});
+
+window.addEventListener('resize', function() {
+  gc.width = window.innerWidth;
+  gc.height = window.innerHeight;
+  pc.width = window.innerWidth;
+  pc.height = window.innerHeight;
+});
+</script>
+</body>
+</html>
